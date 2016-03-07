@@ -1,6 +1,11 @@
 package server;
 
-import java.net.*;   
+import java.net.*;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import java.io.*;
 
 public class ServerThread extends Thread
@@ -19,11 +24,18 @@ public class ServerThread extends Thread
       ID = socket.getPort();
    }
    
-   public void send(String msg)
+   private void sendKey(String msg) throws IOException {
+	   streamOut.writeUTF("<= "+msg);
+	   streamOut.flush();
+	
+   }
+   
+   public void send(String msg) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException
    {   
 	   try
        {  
-		   streamOut.writeUTF("<= "+msg);
+		  System.out.println("sending the message: <= "+msg);
+		  streamOut.writeUTF(SecurityHandlerServer.encryptTheMessage("<= "+msg, server.getKey()));
           streamOut.flush();
        }
        catch(IOException ioe)
@@ -39,15 +51,15 @@ public class ServerThread extends Thread
 	   return ID;
    }
    
-   public void run()
+   public void run() 
    {  
 	   
 	   try
        {  
-		   
+		   this.sendKey("/key " + SecurityHandlerServer.keyToString(server.getKey()));
 		   while(true)
 		   {	   
-			   int retVal = server.checkForDups(ID,streamIn.readUTF());
+			   int retVal = server.checkForDups(ID,SecurityHandlerServer.decryptTheMessage(streamIn.readUTF(),server.getKey()));
 			   
 			   if(retVal == 0)
 			   {   
@@ -62,35 +74,39 @@ public class ServerThread extends Thread
 				   this.send("Login Name?");
 				   continue;
 			   }
-			   else
+			   else if (retVal ==2 )
+			   {
+				   this.send("Welcome "+server.getName(ID)+"!");
 				   break;
+			   }
 		   }
-       }
-       catch(IOException ioe)
-       {  
-      	 System.out.println(ID + " ERROR reading: " + ioe.getMessage());
-          server.remove(ID);
-          stop();
-       }
+       }catch(IOException | InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException ioe)
+		       {  
+		      	 System.out.println(ID + " ERROR reading: " + ioe.getMessage());
+		          server.remove(ID);
+		          stop();
+		       }
 	   
-	  this.send("Welcome "+server.getName(ID)+"!");
-	//streamOut.writeUTF("<= Welcome "+server.getName(ID)+"!");
+	  
       while (true)
       {  
     	  try
          {  
-    	  server.handle(ID, streamIn.readUTF());
-         }
-         catch(IOException ioe)
-         {  
-        	 System.out.println(ID + " ERROR reading: " + ioe.getMessage());
-            server.remove(ID);
-            stop();
-         }
+    	  
+			server.handle(ID, SecurityHandlerServer.decryptTheMessage(streamIn.readUTF(),server.getKey()));
+		
+         }catch(IOException | InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException
+ 				| BadPaddingException e){  
+	        	 System.out.println(ID + " ERROR reading: " + e.getMessage());
+	            server.remove(ID);
+	            stop();
+	         	}
       }
    }
    
-   public void open() throws IOException
+
+
+public void open() throws IOException
    {  
 	   streamIn = new DataInputStream(new 
                         BufferedInputStream(socket.getInputStream()));
