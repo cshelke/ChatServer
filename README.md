@@ -6,7 +6,7 @@ If you are connecting a client from a remote machine, you will need the name of 
 If the executable is a jar, then:
 > java -jar server.jar 49129
 
-So you can run it this way:
+Else you can run it this way too if you have generated the class file:
 > java Server [portno]
 
 I have deployed an instance of the server on my AWS running on port 49129
