@@ -11,7 +11,7 @@ Else you can run it this way too if you have generated the class file:
 
 I have deployed an instance of the server on my AWS running on port 49129
 You can use multiple instances of the clients to access the chat rooms of this server.
-More about the client in the Chat_client repository.
+More about the client in the ChatClient repository.
 
 Steps for implementing Security:
 
